@@ -1,0 +1,20 @@
+{
+  "name": "himti-musik",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["frontend", "backend"],
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "setup": "node scripts/setup-env.js",
+    "dev": "node scripts/dev.js",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "build": "npm run build --workspace frontend",
+    "start": "node backend/src/server.js",
+    "db:init": "node backend/scripts/migrate.js",
+    "admin": "node backend/scripts/admin.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {}
+}
