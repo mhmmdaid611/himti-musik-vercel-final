@@ -66,7 +66,27 @@ export default function App() {
   const announce = (message) => { setNotice(message); setTimeout(() => setNotice(''), 3500); };
   const login = async (username, password) => { const result = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) }); const data = await api('/api/admin/data'); setAdminData(data); setModal(null); announce('Berhasil masuk sebagai admin.'); };
   const logout = async () => { await api('/api/admin/logout', { method: 'POST' }); setAdminData(null); announce('Anda sudah keluar.'); };
-  const saveMember = async (form) => { setBusy(true); try { await api('/api/admin/members', { method: 'POST', body: JSON.stringify({ member: form, id: modal?.member?.id, revision: modal?.member?.revision }) }); await reload(); setModal(null); announce('Data member berhasil disimpan.'); } finally { setBusy(false); } };
+  const saveMember = async (form) => {
+  setBusy(true);
+
+  try {
+    await api('/api/admin/members', {
+      method: 'POST',
+      body: JSON.stringify({
+        member: form,
+        id: modal?.member?.id,
+        revision: modal?.member?.revision
+      })
+    });
+
+    setModal(null);
+    announce('Data member berhasil disimpan.');
+
+    void reload();
+  } finally {
+    setBusy(false);
+  }
+};
   const complete = async (member) => { const targetGroup = member.process === 'Transfer' ? (member.groupId === 'musik-1' ? 'musik-2' : 'musik-1') : undefined; if (!window.confirm(member.process === 'Transfer' ? member.name + ' akan dipindahkan ke ' + groupName(targetGroup) + '. Lanjutkan?' : 'Selesaikan proses ' + member.process + ' untuk ' + member.name + '?')) return; setBusy(true); try { await api('/api/admin/members/complete', { method: 'POST', body: JSON.stringify({ id: member.id, revision: member.revision, targetGroup, date: today() }) }); await reload(); announce(member.process === 'Transfer' ? 'Member berhasil dipindahkan dan tetap Aktif.' : 'Proses berhasil diselesaikan.'); } catch (e) { setError(e.message); } finally { setBusy(false); } };
   const exportCsv = () => { const header = ['No', 'Nama', 'No. WhatsApp', 'Status', 'Proses', 'Tanggal Update', 'Keterangan', 'Komunitas']; const rows = filtered.map((member, index) => [index + 1, member.name, member.phone || '', member.status, member.process, member.updatedDate, member.notes || '', groupName(member.groupId)]); const csv = '\\ufeff' + [header, ...rows].map((row) => row.map((cell) => '"' + String(cell).replaceAll('"', '""') + '"').join(',')).join('\\n'); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = 'himti-musik-' + today() + '.csv'; link.click(); URL.revokeObjectURL(link.href); };
   const doImport = async (event) => { const file = event.target.files?.[0]; if (!file) return; const text = await file.text(); const lines = text.split(/\\r?\\n/).filter(Boolean); const header = lines.find((line) => /nama/i.test(line) && /status/i.test(line)) || lines[0]; const delimiter = header.includes(';') ? ';' : ','; const names = header.split(delimiter).map((item) => item.trim().toLowerCase().replace(/[.\\s_]/g, '')); const index = (keys) => names.findIndex((name) => keys.includes(name)); const members = lines.slice(lines.indexOf(header) + 1).map((line) => line.split(delimiter)).filter((row) => row[index(['nama', 'namamember'])]); const parsed = members.map((row) => ({ groupId: view === 'dashboard' ? 'musik-1' : view, name: row[index(['nama', 'namamember'])], phone: row[index(['nowhatsapp', 'whatsapp', 'nomorwhatsapp'])] || '', status: row[index(['status', 'statusmember'])] || 'Calon', process: row[index(['proses', 'statusproses'])] || 'Selesai', updatedDate: row[index(['tanggalupdate'])] || today(), notes: row[index(['keterangan', 'catatan'])] || '' })); if (!parsed.length) return setError('Data CSV tidak ditemukan.'); setBusy(true); try { await api('/api/admin/import', { method: 'POST', body: JSON.stringify({ members: parsed }) }); await reload(); setNotice(parsed.length + ' member berhasil diimpor.'); } catch (e) { setError(e.message); } finally { setBusy(false); event.target.value = ''; } };
