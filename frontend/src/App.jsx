@@ -51,7 +51,17 @@ export default function App() {
   const loggedIn = Boolean(adminData), members = adminData?.members || publicData.members, groups = adminData?.groups || publicData.groups;
   const activeStats = statsOf(members), groupMembers = view === 'dashboard' ? members : members.filter((member) => member.groupId === view);
   const filtered = groupMembers.filter((member) => (!query || member.name.toLowerCase().includes(query.toLowerCase()) || (member.phone || '').includes(query)) && (status === 'all' || member.status === status) && (process === 'all' || member.process === process));
-  const reload = async () => { try { setPublicData(await api('/api/public')); if (adminData) setAdminData(await api('/api/admin/data')); } catch (e) { setError(e.message); } };
+  const reload = async () => {
+  try {
+    if (adminData) {
+      setAdminData(await api('/api/admin/data'));
+    } else {
+      setPublicData(await api('/api/public'));
+    }
+  } catch (e) {
+    setError(e.message);
+  }
+};
   useEffect(() => { reload(); api('/api/admin/me').then((data) => data.user && api('/api/admin/data').then(setAdminData)).catch(() => {}); }, []);
   const announce = (message) => { setNotice(message); setTimeout(() => setNotice(''), 3500); };
   const login = async (username, password) => { const result = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username, password }) }); const data = await api('/api/admin/data'); setAdminData(data); setModal(null); announce('Berhasil masuk sebagai admin.'); };
